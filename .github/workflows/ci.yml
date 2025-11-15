@@ -1,0 +1,57 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: eventia_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASS: postgres
+      DB_NAME: eventia_db
+      NODE_ENV: test
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Instalar Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Instalar dependencias
+        run: npm install
+
+      - name: Migraciones (si usas sequelize-cli)
+        run: npx sequelize-cli db:migrate
+        if: success()
+
+      - name: Linter
+        run: npm run lint
+
+      - name: Pruebas unitarias
+        run: npm test
+
+      - name: Imprimir OK si todo pasa
+        run: echo "OK ✔ Pipeline completado"
